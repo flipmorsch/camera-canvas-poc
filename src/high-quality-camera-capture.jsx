@@ -1,5 +1,6 @@
 'use client'
 import {useRef, useState, useEffect} from 'react'
+import '../polyfill/image-capture.js' // Import the polyfill before using ImageCapture
 
 const HighQualityCameraCapture = () => {
   const videoRef = useRef(null)
