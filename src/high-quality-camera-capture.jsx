@@ -7,6 +7,8 @@ const HighQualityCameraCapture = () => {
   const [imgSrc, setImgSrc] = useState('')
   const [imageCapture, setImageCapture] = useState(null)
   const [photoBlob, setPhotoBlob] = useState(null)
+  const [imageQuality, setImageQuality] = useState(0.8) // Add quality state (0.1-1.0)
+  const [processingImage, setProcessingImage] = useState(false) // Add processing state
 
   useEffect(() => {
     const loadImageCapturePolyfill = async () => {
@@ -81,7 +83,7 @@ const HighQualityCameraCapture = () => {
         const ctx = canvas.getContext('2d')
         ctx.drawImage(bitmap, 0, 0)
         capturedBlob = await new Promise(resolve =>
-          canvas.toBlob(resolve, 'image/jpeg', 0.95)
+          canvas.toBlob(resolve, 'image/jpeg', 0.8)
         )
         bitmap.close()
       }
@@ -95,29 +97,79 @@ const HighQualityCameraCapture = () => {
     }
   }
 
-  const saveImage = () => {
+  // Function to process image with quality settings
+  const processImageWithQuality = async (blob, quality) => {
+    setProcessingImage(true)
+    try {
+      return new Promise(resolve => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0)
+
+          canvas.toBlob(
+            processedBlob => {
+              setProcessingImage(false)
+              resolve(processedBlob)
+            },
+            'image/jpeg',
+            quality
+          )
+        }
+        img.src = URL.createObjectURL(blob)
+      })
+    } catch (error) {
+      setProcessingImage(false)
+      console.error('Error processing image:', error)
+      return blob // Return original blob if processing fails
+    }
+  }
+
+  const saveImage = async () => {
     if (!photoBlob) return
 
-    const now = new Date()
-    const timestamp = `${now.getFullYear()}${(now.getMonth() + 1)
-      .toString()
-      .padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now
-      .getHours()
-      .toString()
-      .padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now
-      .getSeconds()
-      .toString()
-      .padStart(2, '0')}`
+    try {
+      // Process the image with selected quality
+      const processedBlob = await processImageWithQuality(
+        photoBlob,
+        imageQuality
+      )
 
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(photoBlob)
-    link.download = `photo_${timestamp}.jpg`
+      const now = new Date()
+      const timestamp = `${now.getFullYear()}${(now.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now
+        .getHours()
+        .toString()
+        .padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now
+        .getSeconds()
+        .toString()
+        .padStart(2, '0')}`
 
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      // Get file size in MB for display
+      const fileSizeMB = (processedBlob.size / (1024 * 1024)).toFixed(2)
 
-    URL.revokeObjectURL(link.href)
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(processedBlob)
+      link.download = `photo_${timestamp}_q${Math.round(
+        imageQuality * 100
+      )}.jpg`
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      URL.revokeObjectURL(link.href)
+
+      // Show success message or update UI as needed
+      console.log(`Image saved successfully (${fileSizeMB} MB)`)
+    } catch (error) {
+      console.error('Error saving image:', error)
+    }
   }
 
   return (
@@ -151,19 +203,43 @@ const HighQualityCameraCapture = () => {
             }}
             onLoad={() => URL.revokeObjectURL(imgSrc)}
           />
+
+          {/* Add quality adjustment controls */}
+          <div style={{margin: '15px 0'}}>
+            <label
+              htmlFor="quality-slider"
+              style={{display: 'block', marginBottom: '5px'}}
+            >
+              Image Quality: {Math.round(imageQuality * 100)}%
+            </label>
+            <input
+              id="quality-slider"
+              type="range"
+              min="10"
+              max="100"
+              value={imageQuality * 100}
+              onChange={e => setImageQuality(Number(e.target.value) / 100)}
+              style={{width: '100%', maxWidth: '300px'}}
+            />
+            <div style={{fontSize: '0.8rem', color: '#666', marginTop: '5px'}}>
+              Lower quality = smaller file size
+            </div>
+          </div>
+
           <button
             onClick={saveImage}
+            disabled={processingImage}
             style={{
               margin: '10px 0',
               padding: '8px 16px',
-              backgroundColor: '#4CAF50',
+              backgroundColor: processingImage ? '#cccccc' : '#4CAF50',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
+              cursor: processingImage ? 'default' : 'pointer',
             }}
           >
-            Save Image
+            {processingImage ? 'Processing...' : 'Save Image'}
           </button>
         </div>
       )}
