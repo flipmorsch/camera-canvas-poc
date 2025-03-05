@@ -1,6 +1,6 @@
 'use client'
 import {useRef, useState, useEffect} from 'react'
-import '../polyfill/image-capture.js' // Import the polyfill before using ImageCapture
+// Remove the direct import of 'image-capture'
 
 const HighQualityCameraCapture = () => {
   const videoRef = useRef(null)
@@ -11,7 +11,22 @@ const HighQualityCameraCapture = () => {
 
   // Initialize camera stream with ImageCapture
   useEffect(() => {
+    // Dynamically import the polyfill only on the client side
+    const loadImageCapturePolyfill = async () => {
+      try {
+        // Only import the polyfill in browser environment
+        if (typeof window !== 'undefined') {
+          await import('image-capture')
+        }
+      } catch (err) {
+        console.error('Failed to load image-capture polyfill:', err)
+      }
+    }
+
     const initializeCamera = async () => {
+      // Load the polyfill before using ImageCapture
+      await loadImageCapturePolyfill()
+
       try {
         const constraints = {
           video: {
@@ -26,8 +41,10 @@ const HighQualityCameraCapture = () => {
         const videoTrack = stream.getVideoTracks()[0]
 
         // Create ImageCapture instance
-        const capture = new ImageCapture(videoTrack)
-        setImageCapture(capture)
+        if (typeof window !== 'undefined' && window.ImageCapture) {
+          const capture = new ImageCapture(videoTrack)
+          setImageCapture(capture)
+        }
 
         // Show preview
         if (videoRef.current) {
@@ -46,7 +63,7 @@ const HighQualityCameraCapture = () => {
     initializeCamera()
 
     return () => {
-      if (imageCapture) {
+      if (imageCapture && imageCapture.track) {
         imageCapture.track.stop()
       }
     }
