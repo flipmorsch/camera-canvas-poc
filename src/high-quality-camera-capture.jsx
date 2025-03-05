@@ -1,6 +1,5 @@
 'use client'
 import {useRef, useState, useEffect} from 'react'
-// Remove the direct import of 'image-capture'
 
 const HighQualityCameraCapture = () => {
   const videoRef = useRef(null)
@@ -9,12 +8,9 @@ const HighQualityCameraCapture = () => {
   const [imageCapture, setImageCapture] = useState(null)
   const [photoBlob, setPhotoBlob] = useState(null)
 
-  // Initialize camera stream with ImageCapture
   useEffect(() => {
-    // Dynamically import the polyfill only on the client side
     const loadImageCapturePolyfill = async () => {
       try {
-        // Only import the polyfill in browser environment
         if (typeof window !== 'undefined') {
           await import('image-capture')
         }
@@ -24,35 +20,31 @@ const HighQualityCameraCapture = () => {
     }
 
     const initializeCamera = async () => {
-      // Load the polyfill before using ImageCapture
       await loadImageCapturePolyfill()
 
       try {
         const constraints = {
           video: {
-            width: {ideal: 4096}, // Request ultra HD resolution
+            width: {ideal: 4096},
             height: {ideal: 2160},
             facingMode: 'environment',
-            advanced: [{zoom: 1}], // Some devices support digital zoom
+            advanced: [{zoom: 1}],
           },
         }
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints)
         const videoTrack = stream.getVideoTracks()[0]
 
-        // Create ImageCapture instance
         if (typeof window !== 'undefined' && window.ImageCapture) {
           const capture = new ImageCapture(videoTrack)
           setImageCapture(capture)
         }
 
-        // Show preview
         if (videoRef.current) {
           videoRef.current.srcObject = new MediaStream([videoTrack])
           videoRef.current.play()
         }
 
-        // Log actual camera capabilities
         const capabilities = videoTrack.getCapabilities()
         console.log('Camera capabilities:', capabilities)
       } catch (err) {
@@ -73,12 +65,11 @@ const HighQualityCameraCapture = () => {
     if (!imageCapture) return
 
     try {
-      // Try to capture full-resolution photo (if supported)
       let capturedBlob
       if (typeof imageCapture.takePhoto === 'function') {
         capturedBlob = await imageCapture.takePhoto({
-          imageWidth: 4096, // Use max supported width
-          imageHeight: 2160, // Use max supported height
+          imageWidth: 4096,
+          imageHeight: 2160,
           fillLightMode: 'auto',
         })
       } else {
@@ -95,10 +86,8 @@ const HighQualityCameraCapture = () => {
         bitmap.close()
       }
 
-      // Store the blob for later saving
       setPhotoBlob(capturedBlob)
 
-      // Create object URL with proper EXIF orientation
       const imgUrl = URL.createObjectURL(capturedBlob)
       setImgSrc(imgUrl)
     } catch (error) {
@@ -109,7 +98,6 @@ const HighQualityCameraCapture = () => {
   const saveImage = () => {
     if (!photoBlob) return
 
-    // Create a timestamp for the filename
     const now = new Date()
     const timestamp = `${now.getFullYear()}${(now.getMonth() + 1)
       .toString()
@@ -121,17 +109,14 @@ const HighQualityCameraCapture = () => {
       .toString()
       .padStart(2, '0')}`
 
-    // Create a download link
     const link = document.createElement('a')
     link.href = URL.createObjectURL(photoBlob)
     link.download = `photo_${timestamp}.jpg`
 
-    // Append to body, click and remove
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
 
-    // Clean up the object URL
     URL.revokeObjectURL(link.href)
   }
 
