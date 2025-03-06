@@ -1,5 +1,7 @@
 'use client'
 import {useRef, useState, useEffect} from 'react'
+import {useOrientation} from '@uidotdev/usehooks'
+import './camera-frame.css'
 
 const HighQualityCameraCapture = () => {
   const videoRef = useRef(null)
@@ -9,6 +11,7 @@ const HighQualityCameraCapture = () => {
   const [photoBlob, setPhotoBlob] = useState(null)
   const [imageQuality, setImageQuality] = useState(0.8) // Add quality state (0.1-1.0)
   const [processingImage, setProcessingImage] = useState(false) // Add processing state
+  const orientation = useOrientation()
 
   useEffect(() => {
     const loadImageCapturePolyfill = async () => {
@@ -27,8 +30,8 @@ const HighQualityCameraCapture = () => {
       try {
         const constraints = {
           video: {
-            width: {ideal: 4096},
-            height: {ideal: 2160},
+            width: {ideal: 1920},
+            height: {ideal: 1080},
             facingMode: 'environment',
             advanced: [{zoom: 1}],
           },
@@ -70,8 +73,8 @@ const HighQualityCameraCapture = () => {
       let capturedBlob
       if (typeof imageCapture.takePhoto === 'function') {
         capturedBlob = await imageCapture.takePhoto({
-          imageWidth: 4096,
-          imageHeight: 2160,
+          imageWidth: 1920,
+          imageHeight: 1080,
           fillLightMode: 'auto',
         })
       } else {
@@ -173,76 +176,36 @@ const HighQualityCameraCapture = () => {
   }
 
   return (
-    <div>
-      <div>
+    <div className="camera-frame">
+      {!imgSrc &&  (
         <video
+          className="camera-video"
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          style={{width: '100%', maxWidth: '640px'}}
+          style={{width: '100%'}}
         />
-      </div>
-
-      <button onClick={capturePhoto} style={{margin: '20px 0'}}>
-        Capture Ultra HD Photo
-      </button>
-
-      <canvas ref={canvasRef} style={{display: 'none'}} />
-
-      {imgSrc && (
-        <div>
-          <h3>Captured Image:</h3>
-          <img
-            src={imgSrc}
-            alt="Captured"
-            style={{
-              width: '100%',
-              maxWidth: '640px',
-              imageOrientation: 'from-image', // Respect EXIF data
-            }}
-            onLoad={() => URL.revokeObjectURL(imgSrc)}
-          />
-
-          {/* Add quality adjustment controls */}
-          <div style={{margin: '15px 0'}}>
-            <label
-              htmlFor="quality-slider"
-              style={{display: 'block', marginBottom: '5px'}}
-            >
-              Image Quality: {Math.round(imageQuality * 100)}%
-            </label>
-            <input
-              id="quality-slider"
-              type="range"
-              min="10"
-              max="100"
-              value={imageQuality * 100}
-              onChange={e => setImageQuality(Number(e.target.value) / 100)}
-              style={{width: '100%', maxWidth: '300px'}}
-            />
-            <div style={{fontSize: '0.8rem', color: '#666', marginTop: '5px'}}>
-              Lower quality = smaller file size
-            </div>
-          </div>
-
-          <button
-            onClick={saveImage}
-            disabled={processingImage}
-            style={{
-              margin: '10px 0',
-              padding: '8px 16px',
-              backgroundColor: processingImage ? '#cccccc' : '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: processingImage ? 'default' : 'pointer',
-            }}
-          >
-            {processingImage ? 'Processing...' : 'Save Image'}
-          </button>
-        </div>
       )}
+      {imgSrc && (
+        <img
+          src={imgSrc}
+          alt="Captured"
+          style={{
+            width: '100%',
+            imageOrientation: 'from-image', // Respect EXIF data
+          }}
+          onLoad={() => URL.revokeObjectURL(imgSrc)}
+        />
+      )}
+      {!imgSrc && (
+        <button className="take-photo-button" onClick={capturePhoto}>
+          Take Photo
+        </button>
+      )}
+      <button className="close-button" onClick={capturePhoto}>
+        x
+      </button>
     </div>
   )
 }
